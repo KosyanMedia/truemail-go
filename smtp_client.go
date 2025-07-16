@@ -90,19 +90,20 @@ func (smtpClient *smtpClient) initConnection() (net.Conn, error) {
 
 }
 
+// Initializes pure SMTP client connection with connection timeout
 func (smtpClient *smtpClient) initSmtpConnection() (net.Conn, error) {
 	targetAddress := serverWithPortNumber(smtpClient.targetServerAddress, smtpClient.targetServerPortNumber)
 	connection, error := net.DialTimeout(smtpClient.networkProtocol, targetAddress, smtpClient.connectionTimeout)
 	return connection, error
 }
 
+// Initializes Socks5 -> SMTP client connection with connection timeout
 func (smtpClient *smtpClient) initProxyConnection() (net.Conn, error) {
 	target := serverWithPortNumber(
 		smtpClient.targetServerAddress,
 		smtpClient.targetServerPortNumber,
 	)
 
-	// Настройка аутентификации SOCKS5
 	var auth *proxy.Auth
 	if smtpClient.proxyUser != "" {
 		auth = &proxy.Auth{
@@ -115,13 +116,12 @@ func (smtpClient *smtpClient) initProxyConnection() (net.Conn, error) {
 		KeepAlive: smtpClient.connectionTimeout,
 	}
 
-	proxyDialer, err := proxy.SOCKS5("tcp", smtpClient.proxyAddr, auth, base)
+	proxyDialer, err := proxy.SOCKS5(smtpClient.networkProtocol, smtpClient.proxyAddr, auth, base)
 	if err != nil {
 		return nil, err
 	}
 
-	// Используем Dialer для подключения к SMTP‑серверу
-	conn, err := proxyDialer.Dial("tcp", target)
+	conn, err := proxyDialer.Dial(smtpClient.networkProtocol, target)
 	if err != nil {
 		return nil, err
 	}

@@ -7,13 +7,13 @@ import (
 
 // Configuration structure
 type Configuration struct {
-	ctx                                                                  context.Context
-	VerifierEmail, VerifierDomain, ValidationTypeDefault, Dns            string
-	ConnectionTimeout, ResponseTimeout, ConnectionAttempts, SmtpPort     int
-	WhitelistedDomains, BlacklistedDomains, BlacklistedMxIpAddresses     []string
-	ValidationTypeByDomain                                               map[string]string
-	WhitelistValidation, NotRfcMxLookupFlow, SmtpFailFast, SmtpSafeCheck bool
-	EmailPattern, SmtpErrorBodyPattern                                   *regexp.Regexp
+	ctx                                                                                        context.Context
+	VerifierEmail, VerifierDomain, ValidationTypeDefault, Dns, ProxyAddr, ProxyUser, ProxyPass string
+	ConnectionTimeout, ResponseTimeout, ConnectionAttempts, SmtpPort                           int
+	WhitelistedDomains, BlacklistedDomains, BlacklistedMxIpAddresses                           []string
+	ValidationTypeByDomain                                                                     map[string]string
+	WhitelistValidation, NotRfcMxLookupFlow, SmtpFailFast, SmtpSafeCheck                       bool
+	EmailPattern, SmtpErrorBodyPattern                                                         *regexp.Regexp
 }
 
 // NewConfiguration returns new valid newConfiguration structure
@@ -45,6 +45,9 @@ func NewConfiguration(config ConfigurationAttr) (*Configuration, error) {
 		SmtpSafeCheck:            config.SmtpSafeCheck,
 		EmailPattern:             config.RegexEmail,
 		SmtpErrorBodyPattern:     config.RegexSmtpErrorBody,
+		ProxyAddr:                config.ProxyAddr,
+		ProxyUser:                config.ProxyUser,
+		ProxyPass:                config.ProxyPass,
 	}
 	return &newConfiguration, err
 }

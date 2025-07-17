@@ -8,13 +8,13 @@ import (
 
 // ConfigurationAttr kwargs structure for configuration builder
 type ConfigurationAttr struct {
-	ctx                                                                                           context.Context
-	VerifierEmail, VerifierDomain, ValidationTypeDefault, EmailPattern, SmtpErrorBodyPattern, Dns string
-	ConnectionTimeout, ResponseTimeout, ConnectionAttempts, SmtpPort                              int
-	WhitelistedDomains, BlacklistedDomains, BlacklistedMxIpAddresses                              []string
-	ValidationTypeByDomain                                                                        map[string]string
-	WhitelistValidation, NotRfcMxLookupFlow, SmtpFailFast, SmtpSafeCheck                          bool
-	RegexEmail, RegexSmtpErrorBody                                                                *regexp.Regexp
+	ctx                                                                                                                            context.Context
+	VerifierEmail, VerifierDomain, ValidationTypeDefault, EmailPattern, SmtpErrorBodyPattern, Dns, ProxyAddr, ProxyUser, ProxyPass string
+	ConnectionTimeout, ResponseTimeout, ConnectionAttempts, SmtpPort                                                               int
+	WhitelistedDomains, BlacklistedDomains, BlacklistedMxIpAddresses                                                               []string
+	ValidationTypeByDomain                                                                                                         map[string]string
+	WhitelistValidation, NotRfcMxLookupFlow, SmtpFailFast, SmtpSafeCheck                                                           bool
+	RegexEmail, RegexSmtpErrorBody                                                                                                 *regexp.Regexp
 }
 
 // ConfigurationAttr methods

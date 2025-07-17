@@ -4,12 +4,14 @@ import (
 	"net"
 	"net/smtp"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 // SMTP request configuration. Provides connection/request settings for SMTP client
 type SmtpRequestConfiguration struct {
-	VerifierDomain, VerifierEmail, TargetEmail, TargetServerAddress string
-	TargetServerPortNumber, ConnectionTimeout, ResponseTimeout      int
+	VerifierDomain, VerifierEmail, TargetEmail, TargetServerAddress, ProxyAddr, ProxyUser, ProxyPass string
+	TargetServerPortNumber, ConnectionTimeout, ResponseTimeout                                       int
 }
 
 // smtpRequestConfiguration builder. Creates SMTP request configuration with settings from configuration
@@ -22,6 +24,9 @@ func newSmtpRequestConfiguration(config *Configuration, targetEmail, targetServe
 		TargetServerPortNumber: config.SmtpPort,
 		ConnectionTimeout:      config.ConnectionTimeout,
 		ResponseTimeout:        config.ResponseTimeout,
+		ProxyAddr:              config.ProxyAddr,
+		ProxyUser:              config.ProxyUser,
+		ProxyPass:              config.ProxyPass,
 	}
 }
 
@@ -49,11 +54,11 @@ type client interface {
 
 // SMTP client structure. Provides possibility to interact with target SMTP server
 type smtpClient struct {
-	verifierDomain, verifierEmail, targetEmail, targetServerAddress, networkProtocol string
-	targetServerPortNumber                                                           int
-	connectionTimeout, responseTimeout                                               time.Duration
-	client                                                                           *smtp.Client
-	err                                                                              *SmtpClientError
+	verifierDomain, verifierEmail, targetEmail, targetServerAddress, networkProtocol, proxyAddr, proxyPass, proxyUser string
+	targetServerPortNumber                                                                                            int
+	connectionTimeout, responseTimeout                                                                                time.Duration
+	client                                                                                                            *smtp.Client
+	err                                                                                                               *SmtpClientError
 }
 
 // smtpClient builder. Creates SMTP client with settings from smtpRequestConfiguration
@@ -64,6 +69,9 @@ func newSmtpClient(config *SmtpRequestConfiguration) *smtpClient {
 		targetEmail:            config.TargetEmail,
 		targetServerAddress:    config.TargetServerAddress,
 		targetServerPortNumber: config.TargetServerPortNumber,
+		proxyAddr:              config.ProxyAddr,
+		proxyPass:              config.ProxyPass,
+		proxyUser:              config.ProxyUser,
 		networkProtocol:        tcpTransportLayer,
 		connectionTimeout:      time.Duration(config.ConnectionTimeout) * time.Second,
 		responseTimeout:        time.Duration(config.ResponseTimeout) * time.Second,
@@ -74,9 +82,51 @@ func newSmtpClient(config *SmtpRequestConfiguration) *smtpClient {
 
 // Initializes SMTP client connection with connection timeout
 func (smtpClient *smtpClient) initConnection() (net.Conn, error) {
+	if smtpClient.proxyAddr != "" {
+		return smtpClient.initProxyConnection()
+	} else {
+		return smtpClient.initSmtpConnection()
+	}
+
+}
+
+// Initializes pure SMTP client connection with connection timeout
+func (smtpClient *smtpClient) initSmtpConnection() (net.Conn, error) {
 	targetAddress := serverWithPortNumber(smtpClient.targetServerAddress, smtpClient.targetServerPortNumber)
 	connection, error := net.DialTimeout(smtpClient.networkProtocol, targetAddress, smtpClient.connectionTimeout)
 	return connection, error
+}
+
+// Initializes Socks5 -> SMTP client connection with connection timeout
+func (smtpClient *smtpClient) initProxyConnection() (net.Conn, error) {
+	target := serverWithPortNumber(
+		smtpClient.targetServerAddress,
+		smtpClient.targetServerPortNumber,
+	)
+
+	var auth *proxy.Auth
+	if smtpClient.proxyUser != "" {
+		auth = &proxy.Auth{
+			User:     smtpClient.proxyUser,
+			Password: smtpClient.proxyPass,
+		}
+	}
+	base := &net.Dialer{
+		Timeout:   smtpClient.connectionTimeout,
+		KeepAlive: smtpClient.connectionTimeout,
+	}
+
+	proxyDialer, err := proxy.SOCKS5(smtpClient.networkProtocol, smtpClient.proxyAddr, auth, base)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := proxyDialer.Dial(smtpClient.networkProtocol, target)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 // interface implementation
